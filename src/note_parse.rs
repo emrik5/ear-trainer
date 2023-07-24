@@ -7,7 +7,7 @@ pub fn note_str_to_num(str: String) -> Result<u8, Box<dyn Error>> {
         return Err("Incorrect amount of characters in note name".into());
     }
     let chars: Vec<char> = str.chars().collect();
-    let note = &chars[0];
+    let note = &chars[0].to_ascii_lowercase();
     if !&NOTES.contains(note) {
         return Err("Invalid note name, must be A-G".into());
     }

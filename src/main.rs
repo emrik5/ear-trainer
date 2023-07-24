@@ -1,14 +1,17 @@
 use std::error::Error;
 use std::io::{stdin, stdout, Write};
+use std::path::PathBuf;
 use std::thread::sleep;
 use std::time::Duration;
 
 use midir::{MidiOutput, MidiOutputPort};
 use note_parse::note_str_to_num;
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
 
 pub mod note_parse;
 struct Options {
-    range: (usize, usize),
+    range: (u8, u8),
     seq_mode: SeqMode,
     note_mode: NoteMode,
     game_mode: GameMode,
@@ -18,6 +21,7 @@ struct Options {
 impl Default for Options {
     fn default() -> Self {
         Options {
+            // C3-C5
             range: (48, 72),
             seq_mode: SeqMode::TrueRandom,
             note_mode: NoteMode::Sequential,
@@ -26,15 +30,18 @@ impl Default for Options {
         }
     }
 }
+#[derive(FromPrimitive)]
 enum SeqMode {
     TrueRandom,
     NoRepeat,
 }
+#[derive(FromPrimitive)]
 enum NoteMode {
     Chordiods,
     Sequential,
     Random,
 }
+#[derive(FromPrimitive)]
 enum GameMode {
     Notes,
     Intervals,
@@ -102,7 +109,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     // Reset colors
     println!("\x1b[0m");
 
-    let options = Options::default();
+    let mut options = Options::default();
     {
         // Define a new scope in which the closure `play_note` borrows conn_out, so it can be called easily
         let mut play_note = |note: u8, duration: u64| {
@@ -115,20 +122,32 @@ fn run() -> Result<(), Box<dyn Error>> {
             let _ = conn_out.send(&[NOTE_OFF_MSG, note, VELOCITY]);
         };
 
-        loop {
-            let mut inp = String::new();
-            stdin().read_line(&mut inp).unwrap();
-            match note_str_to_num(inp.trim().to_owned()) {
-                Ok(n) => play_note(n, 2),
-                Err(err) => println!("Error: {}", err),
-            }
-        }
+        // loop {
+        //     let mut inp = String::new();
+        //     stdin().read_line(&mut inp).unwrap();
+        //     match note_str_to_num(inp.trim().to_owned()) {
+        //         Ok(n) => play_note(n, 2),
+        //         Err(err) => println!("Error: {}", err),
+        //     }
+        // }
     }
     sleep(Duration::from_millis(150));
+    new_game(&mut options);
     println!("\nClosing connection");
     // This is optional, the connection would automatically be closed as soon as it goes out of scope
     conn_out.close();
     println!("Connection closed");
 
     Ok(())
+}
+fn new_game(options: &mut Options) {
+    println!("Please select game mode:");
+    println!("0: Notes      -   Hear individual notes and enter their names");
+    println!("1: Intervals  -   Hear two notes and enter the interval between them");
+    println!("2: Chords     -   Hear chords and enter their names");
+    println!("3: Scales     -   Hear scales and enter their names");
+    options.game_mode = FromPrimitive::from_i32(1).unwrap();
+}
+fn prompt_option<T: FromPrimitive>(option: T) {
+    
 }
