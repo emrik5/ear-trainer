@@ -37,7 +37,7 @@ enum SeqMode {
 }
 #[derive(FromPrimitive)]
 enum NoteMode {
-    Chordiods,
+    Cluster,
     Sequential,
     Random,
 }
@@ -104,7 +104,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     // Print fancy title
     println!("\x1b[0m  \x1b[100m                               ");
     print!("\x1b[47m\x1b[30m");
-    println!(" --Welcome to Ear Trainer v1.0!-- ");
+    println!(" --Welcome to Ear Trainer v0.1!-- ");
     println!("\x1b[0m  \x1b[100m                               ");
     // Reset colors
     println!("\x1b[0m");
@@ -140,14 +140,78 @@ fn run() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
-fn new_game(options: &mut Options) {
+fn new_game(options: &mut Options) -> Result<(), Box<dyn Error>> {
     println!("Please select game mode:");
     println!("0: Notes      -   Hear individual notes and enter their names");
     println!("1: Intervals  -   Hear two notes and enter the interval between them");
     println!("2: Chords     -   Hear chords and enter their names");
     println!("3: Scales     -   Hear scales and enter their names");
-    options.game_mode = FromPrimitive::from_i32(1).unwrap();
+    prompt_option(&mut options.game_mode);
+
+    println!("Please select note mode:");
+    println!("0: Cluster    -   Notes are played simultaneously in chords/chordiods");
+    println!("1: Sequential -   Notes are played in sequence");
+    println!("2: Random     -   Pick mode randomly for each question");
+    prompt_option(&mut options.note_mode);
+
+    println!("Please select sequence mode");
+    println!("0: True Random    -   Notes/Chords are picked at random");
+    println!("1: No Repeat      -   Randomize, but make sure all questions appear before repetition");
+    prompt_option(&mut options.seq_mode);
+
+    let prompt_for_range = |prompt: &str| -> u8 {
+        loop {
+            print!("{}: ", prompt);
+            if let Err(_) = stdout().flush() {
+                println!("A read error occurred, please try again");
+                continue;
+            };
+            match || -> Result<u8, Box<dyn Error>> {
+                let mut inp = String::new();
+                stdin().read_line(&mut inp)?;
+                let inp = inp.trim();
+                let note = note_str_to_num(inp)?;
+                Ok(note)
+            }() {
+                Ok(note) => break note,
+                Err(e) => println!("Error: {}", e),
+            }
+        }
+
+    };
+    println!("Please select a note range: ");
+    loop {
+        options.range.0 = prompt_for_range("Range lower bound");
+        options.range.1 = prompt_for_range("Range upper bound");
+        if options.range.0 < options.range.1 {
+            break;
+        } else {
+            println!("Upper bound can't be same as or lower than first bound");
+        }
+    }
+    println!("Allow repetition of questions?");
+    println!("0: ");
+    prompt_option(&mut options.allow_repeat);
+
+
+    Ok(())
 }
-fn prompt_option<T: FromPrimitive>(option: T) {
-    
+fn prompt_option<T: FromPrimitive>(option: &mut T) {
+    loop {
+        print!("Enter number: ");
+        if let Err(_) = stdout().flush() {
+            println!("A read error occurred, please try again");
+            continue;
+        };
+        match || -> Result<(), Box<dyn Error>> {
+            let mut inp = String::new();
+            stdin().read_line(&mut inp)?;
+            let inp: u8 = inp.trim().parse()?;
+            *option = FromPrimitive::from_u8(inp).ok_or("Failed cast to enum variant")?;
+            Ok(())
+        }() {
+            Ok(_) => break,
+            Err(_) => println!("Invalid input"),
+        };
+    }
 }

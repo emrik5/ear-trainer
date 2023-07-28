@@ -1,7 +1,7 @@
-use std::{error::Error, ops::Index};
+use std::error::Error;
 const NOTES: [char; 12] = ['c', ' ', 'd', ' ', 'e', 'f', ' ', 'g', ' ', 'a', ' ', 'b'];
 
-pub fn note_str_to_num(str: String) -> Result<u8, Box<dyn Error>> {
+pub fn note_str_to_num(str: &str) -> Result<u8, Box<dyn Error>> {
     let len = &str.len();
     if !(2..=3).contains(len) {
         return Err("Incorrect amount of characters in note name".into());
