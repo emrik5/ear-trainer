@@ -1,6 +1,6 @@
 use std::error::Error;
+use std::fmt::Display;
 use std::io::{stdin, stdout, Write};
-use std::path::PathBuf;
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -12,6 +12,7 @@ use num_traits::FromPrimitive;
 pub mod note_parse;
 struct Options {
     range: (u8, u8),
+    range_names: (String, String),
     seq_mode: SeqMode,
     note_mode: NoteMode,
     game_mode: GameMode,
@@ -23,6 +24,7 @@ impl Default for Options {
         Options {
             // C3-C5
             range: (48, 72),
+            range_names: ("C3".into(), "C5".into()),
             seq_mode: SeqMode::TrueRandom,
             note_mode: NoteMode::Sequential,
             game_mode: GameMode::Intervals,
@@ -30,18 +32,34 @@ impl Default for Options {
         }
     }
 }
-#[derive(FromPrimitive)]
+impl Display for Options {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, 
+"Game Mode: {:?}
+Note Mode: {:?}
+Sequence: {:?}
+Range: {}-{}
+Allow Repeat: {}", 
+            self.game_mode,
+            self.note_mode,
+            self.seq_mode,
+            self.range_names.0, self.range_names.1,
+            self.allow_repeat
+        )
+    }
+}
+#[derive(FromPrimitive, Debug)]
 enum SeqMode {
     TrueRandom,
     NoRepeat,
 }
-#[derive(FromPrimitive)]
+#[derive(FromPrimitive, Debug)]
 enum NoteMode {
     Cluster,
     Sequential,
     Random,
 }
-#[derive(FromPrimitive)]
+#[derive(FromPrimitive, Debug)]
 enum GameMode {
     Notes,
     Intervals,
@@ -159,19 +177,22 @@ fn new_game(options: &mut Options) -> Result<(), Box<dyn Error>> {
     println!("1: No Repeat      -   Randomize, but make sure all questions appear before repetition");
     prompt_option(&mut options.seq_mode);
 
-    let prompt_for_range = |prompt: &str| -> u8 {
+    let prompt_for_range = |prompt: &str| -> (u8, String) {
         loop {
             print!("{}: ", prompt);
             if let Err(_) = stdout().flush() {
                 println!("A read error occurred, please try again");
                 continue;
             };
-            match || -> Result<u8, Box<dyn Error>> {
+            match || -> Result<(u8, String), Box<dyn Error>> {
                 let mut inp = String::new();
                 stdin().read_line(&mut inp)?;
                 let inp = inp.trim();
                 let note = note_str_to_num(inp)?;
-                Ok(note)
+                let mut inp: Vec<_> = inp.chars().collect();
+                inp[0].make_ascii_uppercase();
+                let inp = inp.into_iter().collect();
+                Ok((note, inp))
             }() {
                 Ok(note) => break note,
                 Err(e) => println!("Error: {}", e),
@@ -181,19 +202,34 @@ fn new_game(options: &mut Options) -> Result<(), Box<dyn Error>> {
     };
     println!("Please select a note range: ");
     loop {
-        options.range.0 = prompt_for_range("Range lower bound");
-        options.range.1 = prompt_for_range("Range upper bound");
+        (options.range.0, options.range_names.0) = prompt_for_range("Range lower bound");
+        (options.range.1, options.range_names.1) = prompt_for_range("Range upper bound");
         if options.range.0 < options.range.1 {
             break;
         } else {
             println!("Upper bound can't be same as or lower than first bound");
         }
     }
+
     println!("Allow repetition of questions?");
-    println!("0: ");
-    prompt_option(&mut options.allow_repeat);
+    println!("0: Disallow   -   the sound for a question will only be heard once");
+    println!("1: Allow      -   the sound for a question can be replayed at will");
+    options.allow_repeat = loop {
+        print!("Enter number: ");
+        stdout().flush()?;
+        let mut inp = String::new();
+        stdin().read_line(&mut inp)?;
+        match inp.trim().parse::<u8>() {
+            Ok(0) => break false,
+            Ok(1) => break true,
+            Ok(_) | Err(_) => println!("Invalid input"),
+        }
+    };
 
-
+    println!("{}", options);
+    loop {
+        
+    }
     Ok(())
 }
 fn prompt_option<T: FromPrimitive>(option: &mut T) {
