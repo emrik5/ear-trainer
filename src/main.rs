@@ -1,19 +1,15 @@
 use std::error::Error;
-use std::fmt::Display;
+
 use std::io::{stdin, stdout, Write};
 use std::thread::sleep;
 use std::time::Duration;
 
 use midir::{MidiOutput, MidiOutputPort};
-use note_parse::note_str_to_num;
-use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
-
+use rand::{thread_rng, Rng};
 use options::Options;
 
 pub mod note_parse;
 pub mod options;
-
 
 fn main() {
     loop {
@@ -78,7 +74,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     let mut options = Options::default();
     {
         // Define a new scope in which the closure `play_note` borrows conn_out, so it can be called easily
-        let mut play_note = |note: u8, duration: u64| {
+        let _play_note = |note: u8, duration: u64| {
             const NOTE_ON_MSG: u8 = 0x90;
             const NOTE_OFF_MSG: u8 = 0x80;
             const VELOCITY: u8 = 100;
@@ -106,4 +102,8 @@ fn run() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
+fn play_game(options: &Options) {
+    println!("\x1bc");
 
+    let note = thread_rng().gen_range(options.range());
+}

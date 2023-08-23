@@ -1,4 +1,8 @@
-use std::{fmt::Display, error::Error, io::{stdout, stdin, Write}};
+use std::{
+    error::Error,
+    fmt::Display,
+    io::{stdin, stdout, Write}, ops::{Range, RangeInclusive},
+};
 
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
@@ -13,7 +17,11 @@ pub struct Options {
     game_mode: GameMode,
     allow_repeat: bool,
 }
-
+impl Options {
+	pub fn range(&self) -> RangeInclusive<u8> {
+		self.range.0..= self.range.1
+	}
+}
 impl Default for Options {
     fn default() -> Self {
         Options {
@@ -29,16 +37,18 @@ impl Default for Options {
 }
 impl Display for Options {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, 
-"Game Mode: {:?}
+        write!(
+            f,
+            "Game Mode: {:?}
 Note Mode: {:?}
 Sequence: {:?}
 Range: {}-{}
-Allow Repeat: {}", 
+Allow Repeat: {}",
             self.game_mode,
             self.note_mode,
             self.seq_mode,
-            self.range_names.0, self.range_names.1,
+            self.range_names.0,
+            self.range_names.1,
             self.allow_repeat
         )
     }
@@ -83,7 +93,7 @@ pub fn new_game(options: &mut Options) -> Result<(), Box<dyn Error>> {
     let prompt_for_range = |prompt: &str| -> (u8, String) {
         loop {
             print!("{}: ", prompt);
-            if let Err(_) = stdout().flush() {
+            if stdout().flush().is_err() {
                 println!("A read error occurred, please try again");
                 continue;
             };
@@ -101,7 +111,6 @@ pub fn new_game(options: &mut Options) -> Result<(), Box<dyn Error>> {
                 Err(e) => println!("Error: {}", e),
             }
         }
-
     };
     println!("Please select a note range: ");
     loop {
@@ -134,7 +143,7 @@ pub fn new_game(options: &mut Options) -> Result<(), Box<dyn Error>> {
 fn prompt_option<T: FromPrimitive>(option: &mut T) {
     loop {
         print!("Enter number: ");
-        if let Err(_) = stdout().flush() {
+        if stdout().flush().is_err() {
             println!("A read error occurred, please try again");
             continue;
         };
